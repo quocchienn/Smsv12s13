@@ -4,6 +4,7 @@ import time
 import json
 import os
 import logging
+import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -30,7 +31,8 @@ def medigoapp(phone):
             'referer': 'https://www.medigoapp.com/',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        json_data = {'phone': '+84' + phone[1:] if phone.startswith('0') else '+84' + phone}
+        phone_num = '+84' + phone[1:] if phone.startswith('0') else '+84' + phone
+        json_data = {'phone': phone_num}
         response = requests.post('https://auth.medigoapp.com/prod/getOtp', headers=headers, json=json_data, timeout=10)
         return f"✅ Medigoapp: {response.status_code}"
     except Exception as e:
@@ -501,7 +503,7 @@ async def spam_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Lỗi spam: {str(e)}")
         await update.message.reply_text(f"❌ Đã xảy ra lỗi: {str(e)[:100]}")
 
-def main():
+async def run_bot():
     """Khởi chạy bot"""
     TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
     
@@ -520,7 +522,23 @@ def main():
     
     # Khởi chạy bot
     logger.info("Bot đang chạy...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    
+    # Giữ bot chạy
+    try:
+        await asyncio.Event().wait()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
+
+def main():
+    """Entry point"""
+    asyncio.run(run_bot())
 
 if __name__ == "__main__":
     main()
