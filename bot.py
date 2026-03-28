@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 # ================== CONFIG ==================
 TOKEN = os.getenv("BOT_TOKEN")  # Lấy từ Render Environment Variables
 
-threading = ThreadPoolExecutor(max_workers=100)
+executor = ThreadPoolExecutor(max_workers=100)   # Giảm xuống 100 để tránh overload
 tgian = 2  # delay giữa các hàm
 
 def medigoapp(phone):
@@ -1434,7 +1434,7 @@ def spam(phone: str, amount: int):
     for _ in range(amount):
         for func in ham:
             try:
-                threading.submit(func, phone)
+                executor.submit(i, phone)
                 time.sleep(tgian)
             except:
                 pass  # bỏ qua lỗi để không crash bot
@@ -1465,7 +1465,7 @@ async def spam_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ Đang spam **{phone}** với **{amount}** lần...")
 
         # Chạy spam trong thread để không block bot
-        threading.submit(spam, phone, amount)
+        executor.submit(spam, phone, amount)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi: {str(e)}")
@@ -1508,24 +1508,23 @@ def main():
         print(f"❌ Lỗi nghiêm trọng: {e}")
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# Fake health server để Render không kill vì "no open ports"
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
         self.end_headers()
-        self.wfile.write(b"Bot is running OK - Telegram Polling")
+        self.wfile.write(b"Bot is running OK - Telegram SMS Spam Bot")
 
 def run_health_server():
-    port = int(os.environ.get("PORT", 10000))   # Render tự truyền biến PORT
+    port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), HealthHandler)
-    print(f"✅ Health check server đang chạy trên port {port}")
+    print(f"✅ Health check server đang chạy trên port {port} (Render yêu cầu)")
     server.serve_forever()
 
-# ================== Chạy health server song song ==================
+# ================== CHẠY BOT ==================
 if __name__ == "__main__":
-    # Chạy health server trong thread riêng (daemon=True để không block khi bot dừng)
+    # Chạy health server song song
     threading.Thread(target=run_health_server, daemon=True).start()
     
-    # Sau đó chạy bot chính (phần asyncio bạn đã sửa trước đó)
-    asyncio.run(run_bot())
+    # Chạy bot chính (phần asyncio.run(run_bot()) của bạn)
+    asyncio.run(run_bot())   # hoặc main() tùy code bạn đang dùng
