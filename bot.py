@@ -1,6 +1,8 @@
 import requests
 import time
 import os
+import asyncio
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -1468,18 +1470,31 @@ async def spam_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Lỗi: {str(e)}")
 
 # ================== Main ==================
+
 def main():
     if not TOKEN:
-        print("❌ BOT_TOKEN chưa được set!")
-        return
+        print("❌ BOT_TOKEN chưa được set trong Environment Variables!")
+        sys.exit(1)
 
-    app = Application.builder().token(TOKEN).build()
+    # Tạo application
+    application = Application.builder().token(TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("spam", spam_command))
+    # Đăng ký handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("spam", spam_command))
 
     print("✅ Bot đang chạy...")
-    app.run_polling()
+
+    # Cách chạy an toàn với Python 3.14
+    try:
+        asyncio.run(application.run_polling(
+            drop_pending_updates=True,   # Bỏ qua tin nhắn cũ khi restart
+            allowed_updates=["message"]  # Chỉ nhận message để tiết kiệm
+        ))
+    except KeyboardInterrupt:
+        print("Bot đã dừng.")
+    except Exception as e:
+        print(f"Lỗi khi chạy bot: {e}")
 
 if __name__ == "__main__":
     main()
