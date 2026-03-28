@@ -1508,18 +1508,24 @@ def main():
         print(f"❌ Lỗi nghiêm trọng: {e}")
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+# Fake health server để Render không kill vì "no open ports"
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
+        self.send_header("Content-type", "text/plain")
         self.end_headers()
-        self.wfile.write(b"Bot is running")
+        self.wfile.write(b"Bot is running OK - Telegram Polling")
 
 def run_health_server():
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 10000))   # Render tự truyền biến PORT
     server = HTTPServer(("0.0.0.0", port), HealthHandler)
-    print(f"✅ Health server running on port {port}")
+    print(f"✅ Health check server đang chạy trên port {port}")
     server.serve_forever()
 
+# ================== Chạy health server song song ==================
 if __name__ == "__main__":
-    main()
-threading.Thread(target=run_health_server, daemon=True).start()
+    # Chạy health server trong thread riêng (daemon=True để không block khi bot dừng)
+    threading.Thread(target=run_health_server, daemon=True).start()
+    
+    # Sau đó chạy bot chính (phần asyncio bạn đã sửa trước đó)
+    asyncio.run(run_bot())
