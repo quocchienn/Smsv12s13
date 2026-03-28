@@ -1471,30 +1471,41 @@ async def spam_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================== Main ==================
 
-def main():
+async def run_bot():
     if not TOKEN:
-        print("❌ BOT_TOKEN chưa được set trong Environment Variables!")
+        print("❌ BOT_TOKEN chưa được thiết lập trong Environment Variables!")
         sys.exit(1)
 
-    # Tạo application
     application = Application.builder().token(TOKEN).build()
 
-    # Đăng ký handlers
+    # Đăng ký lệnh
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("spam", spam_command))
 
-    print("✅ Bot đang chạy...")
+    print("✅ Bot đang chạy... (Python 3.14 compatible)")
 
-    # Cách chạy an toàn với Python 3.14
+    # Khởi động bot đúng cách với asyncio
+    await application.initialize()
+    await application.start()
+
+    # Bắt đầu polling
+    await application.updater.start_polling(
+        drop_pending_updates=True,   # Bỏ tin nhắn cũ khi restart
+        allowed_updates=["message"]
+    )
+
+    # Giữ bot chạy mãi (không exit)
+    await asyncio.Event().wait()
+
+
+def main():
     try:
-        asyncio.run(application.run_polling(
-            drop_pending_updates=True,   # Bỏ qua tin nhắn cũ khi restart
-            allowed_updates=["message"]  # Chỉ nhận message để tiết kiệm
-        ))
+        asyncio.run(run_bot())
     except KeyboardInterrupt:
-        print("Bot đã dừng.")
+        print("\nBot đã được dừng thủ công.")
     except Exception as e:
-        print(f"Lỗi khi chạy bot: {e}")
+        print(f"❌ Lỗi nghiêm trọng: {e}")
+
 
 if __name__ == "__main__":
     main()
