@@ -3,6 +3,7 @@ import time
 import os
 import asyncio
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -1505,7 +1506,20 @@ def main():
         print("\nBot đã được dừng thủ công.")
     except Exception as e:
         print(f"❌ Lỗi nghiêm trọng: {e}")
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running")
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    print(f"✅ Health server running on port {port}")
+    server.serve_forever()
 
 if __name__ == "__main__":
     main()
+threading.Thread(target=run_health_server, daemon=True).start()
